@@ -2,9 +2,10 @@
 
 from colorama import init, Style, Back
 from urllib.request import urlopen
-from random import choice
+import random
 from typing import Literal
 import argparse
+import pyinputplus as pyip
 
 URLS = {"EN": "https://raw.githubusercontent.com/jason-chao/wordle-solver/main/english_words_original_wordle.txt"}
 
@@ -15,6 +16,16 @@ URLS = {"EN": "https://raw.githubusercontent.com/jason-chao/wordle-solver/main/e
 # TODO unittesting ;-) ?
 # TODO think about what should be inside and/or outside of the class
 # ...
+
+
+def user_settings():
+    print("Let's play wordle!")
+    n_words = pyip.inputInt(
+        "How many words do you want to guess at the same time? (up to 6) ", min=1, max=6)
+    n_attempts = pyip.inputInt(
+        "How many atttempts would you like to have? (up to 10) ", min=1, max=10)
+    cheat = pyip.inputYesNo("Do you want to cheat? [yes/no] ")
+    return(n_words, n_attempts, cheat)
 
 
 class GuessedLetter:
@@ -42,12 +53,14 @@ def get_words(language: str = 'EN') -> list:
 
 
 class Wordle():
-    def __init__(self, language="EN", attempts=6):
+    def __init__(self, n_words, n_attempts, cheat, language="EN"):
         self.words = get_words(language)
-        self.solution = choice(self.words)
-        self.max_attempts = attempts
         self.current_attempt = 0
         self.history = []
+        self.max_attempts = n_attempts
+        self.n_words = n_words
+        self.cheat = cheat
+        self.solution = random.sample(self.words, n_words)
         # we need to initalize colorama as well
         init()
 
@@ -73,17 +86,6 @@ class Wordle():
                 result.append(GuessedLetter(guess[i], 'BLACK'))
         return result
 
-    def play(self):
-        while True:
-            if self.current_attempt == self.max_attempts:
-                print(f"You already had {self.max_attempts} guesses!")
-                print("So I guess you lost...")
-                break
-            guessed = self.guess()
-            if guessed:
-                print("CONGRATULATIONS!!")
-                break
-
     def guess(self):
         self.current_attempt += 1
         while True:
@@ -98,16 +100,25 @@ class Wordle():
         else:
             return False
 
+    def play(self):
+        while True:
+            if self.current_attempt == self.max_attempts:
+                print(f"You already had {self.max_attempts} guesses!")
+                print("So I guess you lost...")
+                print("Maybe make it a bit easier next time")
+                break
+            for w in self.solution:
+                guessed = self.guess()
+                if guessed:
+                    print("CONGRATULATIONS!!")
+                    break
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="A Wordle implementation to test out some coding practices")
-    parser.add_argument("--cheat", action="store_true",
-                        help="Tell the solution (for testing purposes)")
     args = parser.parse_args()
 
-    print("Let's play wordle!")
-    wordle = Wordle()
-    if args.cheat:
-        print(f"Correct word (for testing): {wordle.solution}")
+    settings = user_settings()
+    wordle = Wordle(*settings)
     wordle.play()
