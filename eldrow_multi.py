@@ -56,11 +56,12 @@ class Wordle():
     def __init__(self, n_words, n_attempts, cheat, language="EN"):
         self.words = get_words(language)
         self.current_attempt = 0
-        self.history = []
         self.max_attempts = n_attempts
         self.n_words = n_words
         self.cheat = cheat
+        self.history = {k: [] for k in range(n_words)}
         self.solution = random.sample(self.words, n_words)
+        self.words_solved = [False]*self.n_words
         # we need to initalize colorama as well
         init()
 
@@ -74,13 +75,13 @@ class Wordle():
         else:
             return True
 
-    def _check_guess_correct(self):
-        guess = self.history[-1]
+    def _check_guess_correct(self, n_word):
+        guess = self.history[n_word][-1]
         result = []
         for i in range(len(guess)):
-            if guess[i] == self.solution[i]:
+            if guess[i] == self.solution[n_word][i]:
                 result.append(GuessedLetter(guess[i], 'GREEN'))
-            elif guess[i] in self.solution:
+            elif guess[i] in self.solution[n_word][i]:
                 result.append(GuessedLetter(guess[i], 'YELLOW'))
             else:
                 result.append(GuessedLetter(guess[i], 'BLACK'))
@@ -88,30 +89,37 @@ class Wordle():
 
     def guess(self):
         self.current_attempt += 1
-        while True:
-            current_guess = input(f"[{self.current_attempt}] ")
-            if self._check_guess_valid(current_guess):
-                break
-        self.history.append(current_guess)
-        evaluation = self._check_guess_correct()
-        render_result(evaluation)
-        if sum([e.status == "GREEN" for e in evaluation]) == len(evaluation):
+        for i in range(self.n_words):
+            if self.words_solved[i] == True:
+                continue
+            while True:
+                current_guess = input(
+                    f"[Word {i}, attempt {self.current_attempt}] ")
+                if self._check_guess_valid(current_guess):
+                    break
+            self.history[i].append(current_guess)
+            evaluation = self._check_guess_correct(i)
+            render_result(evaluation)
+            if sum([e.status == "GREEN" for e in evaluation]) == len(evaluation):
+                self.words_solved[i] = True
+        if all(x == True for x in self.words_solved):
             return True
         else:
             return False
 
     def play(self):
+        if self.cheat:
+            print(self.solution)
         while True:
             if self.current_attempt == self.max_attempts:
                 print(f"You already had {self.max_attempts} guesses!")
                 print("So I guess you lost...")
                 print("Maybe make it a bit easier next time")
                 break
-            for w in self.solution:
-                guessed = self.guess()
-                if guessed:
-                    print("CONGRATULATIONS!!")
-                    break
+            guessed = self.guess()
+            if guessed:
+                print("CONGRATULATIONS!!")
+                break
 
 
 if __name__ == "__main__":
