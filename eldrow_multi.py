@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from colorama import init, Style, Back
+from colorama import init, Fore, Style, Back
 from urllib.request import urlopen
 import random
 from typing import Literal
@@ -40,8 +40,8 @@ def render_result(evaluated_guess):
                     "YELLOW": Back.YELLOW}
 
     for evaluated_letter in evaluated_guess:
-        print(colorama_map[evaluated_letter.status], end="")
-        print(evaluated_letter.letter, end="")
+        print(colorama_map[evaluated_letter.status], end=" ")
+        print(Style.BRIGHT + Fore.WHITE + evaluated_letter.letter, end=" ")
     print(Style.RESET_ALL)
 
 
@@ -59,7 +59,8 @@ class Wordle():
         self.max_attempts = n_attempts
         self.n_words = n_words
         self.cheat = cheat
-        self.history = {k: [] for k in range(n_words)}
+        self.history = []
+        self.current_status = []
         self.solution = random.sample(self.words, n_words)
         self.words_solved = [False]*self.n_words
         # we need to initalize colorama as well
@@ -76,12 +77,12 @@ class Wordle():
             return True
 
     def _check_guess_correct(self, n_word):
-        guess = self.history[n_word][-1]
+        guess = self.history[-1]
         result = []
         for i in range(len(guess)):
             if guess[i] == self.solution[n_word][i]:
                 result.append(GuessedLetter(guess[i], 'GREEN'))
-            elif guess[i] in self.solution[n_word][i]:
+            elif guess[i] in self.solution[n_word]:
                 result.append(GuessedLetter(guess[i], 'YELLOW'))
             else:
                 result.append(GuessedLetter(guess[i], 'BLACK'))
@@ -89,19 +90,25 @@ class Wordle():
 
     def guess(self):
         self.current_attempt += 1
+        self.current_status = []
+        while True:
+            current_guess = input(
+                f"[Attempt {self.current_attempt}/{self.max_attempts}] ")
+            if self._check_guess_valid(current_guess):
+                break
+        self.history.append(current_guess)
         for i in range(self.n_words):
             if self.words_solved[i] == True:
                 continue
-            while True:
-                current_guess = input(
-                    f"[Word {i}, attempt {self.current_attempt}] ")
-                if self._check_guess_valid(current_guess):
-                    break
-            self.history[i].append(current_guess)
             evaluation = self._check_guess_correct(i)
-            render_result(evaluation)
+            self.current_status.append(evaluation)
             if sum([e.status == "GREEN" for e in evaluation]) == len(evaluation):
                 self.words_solved[i] = True
+                print(Fore.CYAN + 'You solved a word!', end="")
+                print(Style.RESET_ALL)
+
+        for w in self.current_status:
+            render_result(w)
         if all(x == True for x in self.words_solved):
             return True
         else:
@@ -118,7 +125,7 @@ class Wordle():
                 break
             guessed = self.guess()
             if guessed:
-                print("CONGRATULATIONS!!")
+                print(Fore.MAGENTA + "CONGRATULATIONS!!")
                 break
 
 
